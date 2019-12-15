@@ -10,9 +10,16 @@ class Cluster(object):
     def __init__(self, pattern):
         """Initializes Cluster object
 
-        :param pattern: regular expression string
+        :param pattern: regular expression string; must match the whole line
         """
-        self.pattern = pattern
+        assert len(pattern) > 0, 'Pattern must not be empty'
+        assert pattern[:1] == '^' and pattern[-1:] == '$', \
+            'Pattern must begin with ^ and end with $'
+
+        # Omit first ^ and last $ from sequence so they won't interfere
+        # with possible ^ and $ characters inside the pattern
+        self.sequence = pattern[1:-1]
+
         self.prog = re.compile(pattern)
 
         # From documentation: if you want to compare one sequence against
@@ -20,14 +27,14 @@ class Cluster(object):
         # once and call set_seq1() repeatedly, once for each of the other
         #  sequences
         self.seq = SequenceMatcher()
-        self.seq.set_seq2(pattern)
+        self.seq.set_seq2(self.sequence)
 
     def get_matching_blocks(self, other):
         """Get non-overlapping matching sub-strings, see difflib documentation
 
         :param other: the other cluster to compare this cluster with
         """
-        self.seq.set_seq1(other.pattern)
+        self.seq.set_seq1(other.sequence)
         return self.seq.get_matching_blocks()
 
     def merge(self, other):
@@ -48,11 +55,11 @@ class Cluster(object):
                 else:
                     mergepattern = mergepattern + '.*$'
             elif len(mergepattern) == 1 and (i > 0 or j > 0):
-                mergepattern = '^.*' + self.pattern[j:j+n]
+                mergepattern = '^.*' + self.sequence[j:j+n]
             elif len(mergepattern) == 1:
-                mergepattern = mergepattern + self.pattern[j:j+n]
+                mergepattern = mergepattern + self.sequence[j:j+n]
             else:
-                mergepattern = mergepattern + '.*' + self.pattern[j:j+n]
+                mergepattern = mergepattern + '.*' + self.sequence[j:j+n]
             latestpos1 = i+n
             latestpos2 = j+n
 
