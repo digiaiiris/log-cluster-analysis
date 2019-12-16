@@ -33,6 +33,14 @@ class Cluster(object):
     def __str__(self):
         return self.pattern
 
+    def to_regex(self):
+        return '^' + self.pattern + '$';
+
+    def to_text(self, gapmarker='@@'):
+        """Convert cluster to text representation, using gapmarker
+           in place of .* (anything) and unescaping all else"""
+        return re.sub(r'\\([^\\])', r'\1', self.pattern.replace('.*', gapmarker))
+
     def matches_line(self, line):
         """Check if the cluster pattern matches the given line
 
