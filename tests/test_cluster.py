@@ -6,6 +6,10 @@ from ic_analysis import Cluster
 
 class TestCluster(unittest.TestCase):
 
+    def test_simple_match(self):
+        c = Cluster.Cluster('^abc .* def$')
+        self.assertTrue(c.matches('abc abc def'), 'match fails with ' + str(c))
+
     def test_simple_merge(self):
         c1 = Cluster.Cluster('^abc.*def$')
         c2 = Cluster.Cluster('^def.*ghi$')

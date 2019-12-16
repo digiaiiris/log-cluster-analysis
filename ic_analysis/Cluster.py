@@ -29,6 +29,26 @@ class Cluster(object):
         self.seq = SequenceMatcher()
         self.seq.set_seq2(self.sequence)
 
+    def __str__(self):
+        return self.sequence
+
+    def matches(self, line):
+        """Check if the given line matches with the cluster pattern
+
+        :returns: True if matches, False if not
+        """
+
+        if self.prog.match(line) is None:
+            return False
+        else:
+            return True
+
+    def get_match_ratio(self, other):
+        """Get matching ratio (0.0-1.0) compared to the other cluster"""
+
+        self.seq.set_seq1(other.sequence)
+        return self.seq.ratio()
+
     def get_matching_blocks(self, other):
         """Get non-overlapping matching sub-strings, see difflib documentation
 
