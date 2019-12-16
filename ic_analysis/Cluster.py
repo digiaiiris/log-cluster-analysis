@@ -88,6 +88,8 @@ class Cluster(object):
         mergepattern = ""
         latestpos1 = 0
         latestpos2 = 0
+        print("first: " + self.pattern)
+        print("second: " + other.pattern)
         for i, j, n in blocks:
             if n == 0:
                 # Last block
@@ -104,6 +106,7 @@ class Cluster(object):
 
         # Remove duplicate .* patterns that may have caused by the merging
         mergepattern = mergepattern.replace(".*.*", ".*")
+        print("mergepattern: " + mergepattern)
         return Cluster(mergepattern, escape=False)
 
 

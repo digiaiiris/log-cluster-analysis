@@ -14,7 +14,9 @@ def main(args=None):
                         help="Path to cluster states which gets updated")
     parser.add_argument("--softmaxlimit", type=int, default=10,
                         help="Maximum number of clusters to keep (soft limit)")
-    parser.add_argument("--minsimilarity", type=float, default=0.5,
+    parser.add_argument("--hardmaxlimit", type=int, default=25,
+                        help="Maximum number of clusters to keep (hard limit)")
+    parser.add_argument("--minsimilarity", type=float, default=0.6,
                         help="Minimum similarity between clusters (0.0-1.0, 1.0 means identical")
     parser.add_argument("--printprogress", type=bool, const=True, default=False, nargs='?',
                         help="Print dot (.) for every line processed")
@@ -32,7 +34,7 @@ def main(args=None):
 #        # Read cluster list from file, written by the previous run
 #        a = open('/tmp/file.py', 'r')
 
-    a = Analyzer(softmaxlimit=args.softmaxlimit, minsimilarity=args.minsimilarity)
+    a = Analyzer(softmaxlimit=args.softmaxlimit, hardmaxlimit=args.hardmaxlimit, minsimilarity=args.minsimilarity)
     for line in sys.stdin:
         a.analyze_line(line.rstrip())
         if args.printprogress:

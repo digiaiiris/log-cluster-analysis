@@ -8,7 +8,7 @@ import pprint
 class TestCluster(unittest.TestCase):
 
     def test_simple_analysis(self):
-        a = Analyzer.Analyzer(softmaxlimit=2)
+        a = Analyzer.Analyzer(hardmaxlimit=2)
         c1 = a.analyze_line('abc def ghi')
         self.assertEqual(c1.pattern, r'abc\ def\ ghi', str(a))
 
@@ -25,13 +25,13 @@ class TestCluster(unittest.TestCase):
                          'analyzer failed with ' + str(a))
 
     def test_merged_return_value(self):
-        a = Analyzer.Analyzer(softmaxlimit=2)
+        a = Analyzer.Analyzer(hardmaxlimit=2)
         a.analyze_line('foo bar gee')
         a.analyze_line('ghi')
         c = a.analyze_line(r'foo bar')
         self.assertEqual(c.pattern, r'foo\ bar.*', str(a))
 
-    def test_high_similarity(self):
+    def test_high_similarity_soft_limit(self):
         a = Analyzer.Analyzer(softmaxlimit=2, minsimilarity=0.99)
         a.analyze_line('foo bar')
         a.analyze_line('foo ghi xxx')

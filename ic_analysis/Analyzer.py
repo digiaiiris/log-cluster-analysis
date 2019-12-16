@@ -7,21 +7,23 @@ from Cluster import Cluster
 class Analyzer(object):
     """Analyzer receives lines and clusters them"""
 
-    def __init__(self, softmaxlimit=10, minsimilarity=0.5, clusterlist=None):
+    def __init__(self, softmaxlimit=10, hardmaxlimit=25, minsimilarity=0.6, clusterlist=None):
         """Initializes Cluster object
 
         :param softmaxlimit (optional): soft maximum number of Clusters to form
+        :param hardmaxlimit (optional): hard maximum number of Clusters to form
         :param minsimilarity (optiona): how similar lines must be in oder to be
                merged into a cluster: 0.0 no similarity, 1.0 completely similar
         :param clusterlist (optional): list of Cluster objects to start with
         """
 
-        if not minsimilarity > 0:
-            raise ValueError('minsimilarity must be greater than zero')
+        if not (minsimilarity > 0 and minsimilarity < 1):
+            raise ValueError('minsimilarity must be greater than 0 and less than 1')
         self.minsimilarity = minsimilarity
-        if not softmaxlimit > 0:
+        if not (softmaxlimit > 0 and hardmaxlimit > 0):
             raise ValueError('Maximum number of clusters must be at least 2')
-        self.softmaxlimit = softmaxlimit
+        self.softmaxlimit = min(softmaxlimit, hardmaxlimit)
+        self.hardmaxlimit = hardmaxlimit
         if clusterlist is None:
             self.clusters = []
         else:
@@ -68,8 +70,14 @@ class Analyzer(object):
                     similar_c1 = c1
                     similar_c2 = c2
 
-        if maxratio < self.minsimilarity:
-            # No cluster with enought resemblance to each other
+        if maxratio < self.minsimilarity and len(self.clusters) <= self.hardmaxlimit:
+            # No cluster with enough resemblance to each other
+            return c
+
+        if maxratio == 0:
+            # Hard max number of clusters exceeded but no cluster resemble each other
+            # Just remove the oldest one
+            self.clusters.pop()
             return c
 
         merged_cluster = similar_c1.merge(similar_c2)
