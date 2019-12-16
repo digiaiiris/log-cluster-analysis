@@ -1,6 +1,0 @@
-./tests/test_analyzer.py:16:54: W605 invalid escape sequence '\ '
-./tests/test_analyzer.py:18:54: W605 invalid escape sequence '\ '
-./tests/test_analyzer.py:18:58: W605 invalid escape sequence '\ '
-./ic_analysis/Analyzer.py:75:75: E231 missing whitespace after ','
-./ic_analysis/Analyzer.py:75:80: E501 line too long (94 > 79 characters)
-./ic_analysis/Analyzer.py:75:81: E231 missing whitespace after ','
