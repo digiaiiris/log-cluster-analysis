@@ -7,33 +7,34 @@ from difflib import SequenceMatcher
 class Cluster(object):
     """Analyzed cluster"""
 
-    def __init__(self, pattern):
-        """Initializes Cluster object
+    def __init__(self, line, escape=True):
+        """Initializes Cluster object with the given line
 
-        :param pattern: regular expression string; must match the whole line
+        :param line: regular expression string; must match the whole line
+        :param escape (optional): whether the line should be escaped,
+                                  False if the line is already escaped
         """
-        assert len(pattern) > 0, 'Pattern must not be empty'
-        assert pattern[:1] == '^' and pattern[-1:] == '$', \
-            'Pattern must begin with ^ and end with $'
 
-        # Omit first ^ and last $ from sequence so they won't interfere
-        # with possible ^ and $ characters inside the pattern
-        self.sequence = pattern[1:-1]
-
-        self.prog = re.compile(pattern)
+        # We want to store the pattern as escaped so that get_matching_blocks
+        # works correctly in the case where the actual line contains '.*'
+        if escape:
+            self.pattern = re.escape(line)
+        else:
+            self.pattern = line
+        self.prog = re.compile('^' + self.pattern + '$')
 
         # From documentation: if you want to compare one sequence against
         # many sequences, use set_seq2() to set the commonly used sequence
         # once and call set_seq1() repeatedly, once for each of the other
         #  sequences
         self.seq = SequenceMatcher()
-        self.seq.set_seq2(self.sequence)
+        self.seq.set_seq2(self.pattern)
 
     def __str__(self):
-        return self.sequence
+        return self.pattern
 
-    def matches(self, line):
-        """Check if the given line matches with the cluster pattern
+    def matches_line(self, line):
+        """Check if the cluster pattern matches the given line
 
         :returns: True if matches, False if not
         """
@@ -43,10 +44,22 @@ class Cluster(object):
         else:
             return True
 
+    def matches_cluster(self, other):
+        """Check if the cluster pattern matches the other cluster pattern
+
+        :returns: True if matches (ie. this cluster replaces the other one)
+        """
+
+        # In cluster patterns, special regex characters like dot and asterix are
+        # escaped by a backslash
+        # To check if the cluster patterns overlap, first unescape the other one
+        otherpattern = re.sub(r'\\([^\\])', r'\1', other.pattern)
+        return self.matches_line(otherpattern)
+
     def get_match_ratio(self, other):
         """Get matching ratio (0.0-1.0) compared to the other cluster"""
 
-        self.seq.set_seq1(other.sequence)
+        self.seq.set_seq1(other.pattern)
         return self.seq.ratio()
 
     def get_matching_blocks(self, other):
@@ -54,7 +67,7 @@ class Cluster(object):
 
         :param other: the other cluster to compare this cluster with
         """
-        self.seq.set_seq1(other.sequence)
+        self.seq.set_seq1(other.pattern)
         return self.seq.get_matching_blocks()
 
     def merge(self, other):
@@ -64,28 +77,26 @@ class Cluster(object):
         :returns: merged cluster object
         """
         blocks = self.get_matching_blocks(other)
-        mergepattern = "^"
+        mergepattern = ""
         latestpos1 = 0
         latestpos2 = 0
         for i, j, n in blocks:
             if n == 0:
                 # Last block
-                if latestpos1 == i+n and latestpos2 == j+n:
-                    mergepattern = mergepattern + '$'
-                else:
-                    mergepattern = mergepattern + '.*$'
-            elif len(mergepattern) == 1 and (i > 0 or j > 0):
-                mergepattern = '^.*' + self.sequence[j:j+n]
-            elif len(mergepattern) == 1:
-                mergepattern = mergepattern + self.sequence[j:j+n]
+                if latestpos1 != i+n or latestpos2 != j+n:
+                    mergepattern = mergepattern + '.*'
+            elif len(mergepattern) == 0 and (i > 0 or j > 0):
+                mergepattern = '.*' + self.pattern[j:j+n]
+            elif len(mergepattern) == 0:
+                mergepattern = mergepattern + self.pattern[j:j+n]
             else:
-                mergepattern = mergepattern + '.*' + self.sequence[j:j+n]
+                mergepattern = mergepattern + '.*' + self.pattern[j:j+n]
             latestpos1 = i+n
             latestpos2 = j+n
 
         # Remove duplicate .* patterns that may have caused by the merging
         mergepattern = mergepattern.replace(".*.*", ".*")
-        return Cluster(mergepattern)
+        return Cluster(mergepattern, escape=False)
 
 
 if __name__ == "__main__":

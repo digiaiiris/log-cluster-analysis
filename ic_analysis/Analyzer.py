@@ -41,11 +41,11 @@ class Analyzer(object):
 
         # First check if line matches exactly to any existing cluster
         for c in self.clusters:
-            if c.matches(line):
+            if c.matches_line(line):
                 return c
 
         # Append the line as a cluster per-se
-        c = Cluster('^' + re.escape(line) + '$')
+        c = Cluster(line)
         self.clusters.append(c)
 
         if len(self.clusters) <= self.softmaxlimit:
@@ -77,8 +77,7 @@ class Analyzer(object):
         # Next remove all clusters from the list which match the new one
         # Use unescaped version of cluster sequence in match comparison
         self.clusters = [c for c in self.clusters
-                         if not merged_cluster.matches(
-                             re.sub(r'\\([^\\])', r'\1', c.sequence))]
+                         if not merged_cluster.matches_cluster(c)]
         self.clusters.append(merged_cluster)
 
         # Return either the newly created cluster or the merged one if

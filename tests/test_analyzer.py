@@ -10,18 +10,18 @@ class TestCluster(unittest.TestCase):
     def test_simple_analysis(self):
         a = Analyzer.Analyzer(softmaxlimit=2)
         c1 = a.analyze_line('abc def ghi')
-        self.assertEqual(c1.sequence, r'abc\ def\ ghi', str(a))
+        self.assertEqual(c1.pattern, r'abc\ def\ ghi', str(a))
 
         c2 = a.analyze_line('abc xxx 123 123 ghi')
-        self.assertEqual(c2.sequence, r'abc\ xxx\ 123\ 123\ ghi', str(a))
+        self.assertEqual(c2.pattern, r'abc\ xxx\ 123\ 123\ ghi', str(a))
 
         c3 = a.analyze_line('foo bar')
-        self.assertEqual(c3.sequence, r'foo\ bar', str(a))
+        self.assertEqual(c3.pattern, r'foo\ bar', str(a))
 
         self.assertEqual(len(a.clusters), 2, 'merge failed ' + str(a))
-        self.assertEqual(a.clusters[0].sequence, r'foo\ bar',
+        self.assertEqual(a.clusters[0].pattern, r'foo\ bar',
                          'analyzer failed with ' + str(a))
-        self.assertEqual(a.clusters[1].sequence, r'abc\ .*\ ghi',
+        self.assertEqual(a.clusters[1].pattern, r'abc\ .*\ ghi',
                          'analyzer failed with ' + str(a))
 
     def test_merged_return_value(self):
@@ -29,7 +29,7 @@ class TestCluster(unittest.TestCase):
         a.analyze_line('foo bar gee')
         a.analyze_line('ghi')
         c = a.analyze_line(r'foo bar')
-        self.assertEqual(c.sequence, r'foo\ bar.*', str(a))
+        self.assertEqual(c.pattern, r'foo\ bar.*', str(a))
 
     def test_high_similarity(self):
         a = Analyzer.Analyzer(softmaxlimit=2, minsimilarity=0.99)
