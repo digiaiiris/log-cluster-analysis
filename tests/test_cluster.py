@@ -31,6 +31,13 @@ class TestCluster(unittest.TestCase):
         self.assertEqual(c3.pattern, '.*ghi',
                          'merge failed with ' + c3.pattern)
 
+    def test_merge_pattern_end_with_different_special_character(self):
+        c1 = Cluster.Cluster('abcdef.')
+        c2 = Cluster.Cluster('abcdef*')
+        c3 = c1.merge(c2)
+        self.assertEqual(c3.pattern, 'abcdef.*',
+                         'merge failed with ' + c3.pattern)
+
     def test_empty_merge(self):
         c1 = Cluster.Cluster('')
         c2 = Cluster.Cluster('def.*ghi', escape=False)

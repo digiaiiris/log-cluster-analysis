@@ -28,6 +28,7 @@ class Analyzer(object):
             self.clusters = []
         else:
             self.clusters = cluster_list
+        self.mergeseqcache = MergeSequenceCache()
 
     def __str__(self):
         mystr = ""
@@ -64,7 +65,7 @@ class Analyzer(object):
             c1 = self.clusters[idx]
             for jdx in range(idx+1, listlen):
                 c2 = self.clusters[jdx]
-                ratio = c1.get_match_ratio(c2)
+                ratio = 2.0 * mergeseqcache.get(c1, c2) / (c1.len + c2.len)
                 if ratio > maxratio:
                     maxratio = ratio
                     similar_c1 = c1
@@ -77,15 +78,19 @@ class Analyzer(object):
         if maxratio == 0:
             # Hard max number of clusters exceeded but no cluster resemble each other
             # Just remove the oldest one
-            self.clusters.pop()
+            self.clusters.pop(0)
             return c
 
-        merged_cluster = similar_c1.merge(similar_c2)
+        mergeseq = mergeseqcache.get(c1, c2)
+        merged_cluster = mergeseq.generate_cluster(mergeseqcache.getmatchercache(c1))
 
         # Next remove all clusters from the list which match the new one
         # Use unescaped version of cluster sequence in match comparison
-        self.clusters = [c for c in self.clusters
-                         if not merged_cluster.matches_cluster(c)]
+        clusters_to_remove = [c for c in self.clusters
+                              if merged_cluster.matches_cluster(c)]
+        for c in clusters_to_remove:
+            mergeseqcache.remove_cluster(c)
+        self.clusters = [c for c in self.clusters if not c in clusters_to_remove]
         self.clusters.append(merged_cluster)
 
         # Return either the newly created cluster or the merged one if

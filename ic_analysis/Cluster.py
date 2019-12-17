@@ -7,39 +7,43 @@ from difflib import SequenceMatcher
 class Cluster(object):
     """Analyzed cluster"""
 
-    def __init__(self, line, escape=True):
+    def __init__(self, line=None):
         """Initializes Cluster object with the given line
 
-        :param line: regular expression string; must match the whole line
-        :param escape (optional): whether the line should be escaped,
-                                  False if the line is already escaped
+        :param line (optiona): line that is used per-se as a cluster
         """
 
-        # We want to store the pattern as escaped so that get_matching_blocks
-        # works correctly in the case where the actual line contains '.*'
-        if escape:
-            self.pattern = re.escape(line)
+        if line:
+            self.tokens = [Token(line=line)]
+            self.len = len(line)
+            self.prog = re.compile('^' + re.escape(line) + '$')
         else:
-            self.pattern = line
-        self.prog = re.compile('^' + self.pattern + '$')
+            self.tokens = []
+            self.len = 0
 
-        # From documentation: if you want to compare one sequence against
-        # many sequences, use set_seq2() to set the commonly used sequence
-        # once and call set_seq1() repeatedly, once for each of the other
-        #  sequences
-        self.seq = SequenceMatcher()
-        self.seq.set_seq2(self.pattern)
+    def set_tokens(self, tokens):
+        """Set a token list to this cluster"""
+
+        self.tokens = tokens
+        pattern = '^'
+
+        # Note that if there can be any characters at the end of the line,
+        # the last token is '' with anybefore=True
+        for t in tokens:
+            pattern = pattern + t.to_regex()
+        pattern = pattern + '$'
+        self.prog = re.compile(pattern)
+        self.len = 0
+        for t in self.tokens:
+            self.len = self.len + t.len()
 
     def __str__(self):
-        return self.pattern
-
-    def to_regex(self):
-        return '^' + self.pattern + '$';
+        return self.prog.pattern
 
     def to_text(self, gapmarker='@@'):
         """Convert cluster to text representation, using gapmarker
            in place of .* (anything) and unescaping all else"""
-        return re.sub(r'\\([^\\])', r'\1', self.pattern.replace('.*', gapmarker))
+        return re.sub(r'\\([^\\])', r'\1', self.prog.pattern.replace('.*', gapmarker))
 
     def matches_line(self, line):
         """Check if the cluster pattern matches the given line
@@ -61,53 +65,66 @@ class Cluster(object):
         # In cluster patterns, special regex characters like dot and asterix are
         # escaped by a backslash
         # To check if the cluster patterns overlap, first unescape the other one
-        otherpattern = re.sub(r'\\([^\\])', r'\1', other.pattern)
+        otherpattern = re.sub(r'\\([^\\])', r'\1', other.prog.pattern)
         return self.matches_line(otherpattern)
 
-    def get_match_ratio(self, other):
-        """Get matching ratio (0.0-1.0) compared to the other cluster"""
-
-        self.seq.set_seq1(other.pattern)
-        return self.seq.ratio()
-
-    def get_matching_blocks(self, other):
-        """Get non-overlapping matching sub-strings, see difflib documentation
-
-        :param other: the other cluster to compare this cluster with
-        """
-        self.seq.set_seq1(other.pattern)
-        return self.seq.get_matching_blocks()
-
-    def merge(self, other):
-        """Merge this cluster with another one
+    def construct_merge_sequence(self, other, minsimilarity, matchercache):
+        """Construct a merge sequence merging this cluster with another one
 
         :param other: the other cluster to merge with
-        :returns: merged cluster object
+        :param minsimilarity: min similarity in order to merge two tokens (0.0-1.0)
+        :returns: merged cluster object or None is clusters are not similar enough
         """
-        blocks = self.get_matching_blocks(other)
-        mergepattern = ""
-        latestpos1 = 0
-        latestpos2 = 0
-        print("first: " + self.pattern)
-        print("second: " + other.pattern)
-        for i, j, n in blocks:
-            if n == 0:
-                # Last block
-                if latestpos1 != i+n or latestpos2 != j+n:
-                    mergepattern = mergepattern + '.*'
-            elif len(mergepattern) == 0 and (i > 0 or j > 0):
-                mergepattern = '.*' + self.pattern[j:j+n]
-            elif len(mergepattern) == 0:
-                mergepattern = mergepattern + self.pattern[j:j+n]
-            else:
-                mergepattern = mergepattern + '.*' + self.pattern[j:j+n]
-            latestpos1 = i+n
-            latestpos2 = j+n
 
-        # Remove duplicate .* patterns that may have caused by the merging
-        mergepattern = mergepattern.replace(".*.*", ".*")
-        print("mergepattern: " + mergepattern)
-        return Cluster(mergepattern, escape=False)
+        # List that contains tuple:
+        #  - index reached in this cluster token list
+        #  - index reached in the other cluster's token list
+        #  - MergeSequence object constructed so far
+        work_queue = [(0,0,None)]
+
+        # Find a merge sequence with a maximum weight ie. similar subsequent matches
+        maxweight = 0
+        maxseq = None
+
+        while len(work_queue) > 0:
+            startidx, startjdx, seq = work_queue.pop()
+            foundmatching = False
+            for idx in range(startidx, len(self.tokens)):
+                for jdx in range(startjdx, len(other.tokens)):
+                    token1 = self.tokens[idx]
+                    token2 = other.tokens[jdx]
+                    if token1.len() == 0 or token2.len() == 0:
+                        # Empty filler token (should be last token in cluster)
+                        continue
+                    m = matchercache.get(token1, token2)
+                    if matcher.real_quick_ratio() >= minsimilarity:
+                        weight = m.ratio() * (token1.len()+token2.len()) * 0.5
+                        if weight >= minsimilarity:
+                            # Tokens are similar enough so that we can branch
+                            # into a new merge sequence path
+                            seq2 = MergeSequence(seq, token1, token2,
+                                                 idx>startidx or jdx>startjdx,
+                                                 weight)
+                            if idx+1 < len(self.tokens) or 
+                               jdx+1 < len(other.tokens):
+                                # Add the sequence to the working queue
+                                work_queue.append((idx+1, jdx+1, seq2))
+                            else:
+                                # Finished to the end of both clusters
+                                if seq2.weight > maxweight:
+                                    maxweight = seq2.weight
+                                    maxseq = seq2
+            if not foundmatching:
+                # Not matching token pair found after this merge sequence
+                # End the merge sequence here
+                if seq and seq.weight > maxweight:
+                    if startidx+1 < len(self.tokens) or startjdx+1 < len(other.tokens):
+                        # Not reached the end of clusters, add an end filler
+                        seq.add_pair(Token(''), Token(''), True, 0)
+                    maxweight = seq.weight
+                    maxseq = seq
+
+        return maxseq
 
 
 if __name__ == "__main__":
