@@ -30,30 +30,20 @@ class MergeSequence(object):
         else:
             self.weight = weight
 
-    def generate_cluster(self, matchercache):
-        """Merge the token pairs and generate a cluster of them
+    def to_list(self):
+        """Construct an ordered list of token pairs to merge
 
-        :returns: Cluster object generated
+        :returns: List of tuples containing token1, token2 and anybefore
         """
 
-        # First construct an ordered list of token pairs to merge
+        # Traverse backward the merge sequence chain and insert at the start of list
         pairs = []
         seq = self
         while seq is not None:
             pairs.insert(0, (seq.token1, seq.token2, seq.anybefore))
             seq = seq.previous
 
-        for token1, token2, anybefore in pairs:
-            mergedlist = token1.merge(token2, matchercache.get(token1, token2))
-            if anybefore:
-                # Mark to the first token in the merged list that there were
-                # some skipped tokens ie characters before this token pair
-                mergedlist[0].anybefore = True
-            tokens.extend(mergedlist)
-
-        c = Cluster()
-        c.set_tokens(tokens)
-        return c
+        return pairs
 
 
 if __name__ == "__main__":

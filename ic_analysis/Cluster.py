@@ -1,7 +1,8 @@
 #!/usr/bin/python
 
 import re
-from difflib import SequenceMatcher
+from Token import Token
+from MergeSequence import MergeSequence
 
 
 class Cluster(object):
@@ -14,7 +15,7 @@ class Cluster(object):
         """
 
         if line:
-            self.tokens = [Token(line=line)]
+            self.tokens = [Token(line)]
             self.len = len(line)
             self.prog = re.compile('^' + re.escape(line) + '$')
         else:
@@ -35,15 +36,43 @@ class Cluster(object):
         self.prog = re.compile(pattern)
         self.len = 0
         for t in self.tokens:
-            self.len = self.len + t.len()
+            self.len = self.len + t.len
+
+    @staticmethod
+    def new_cluster_from_merge_sequence(seq, matchercache):
+        """Merge the token pairs and generate a cluster of them
+
+        :params: MergeSequence to apply
+        :param matchercache: SequenceMatcherCache object for this cluster merge
+        :returns: Cluster object generated
+        """
+
+        tokens = []
+        for token1, token2, anybefore in seq.to_list():
+            mergedlist = token1.merge(token2, matchercache.get_matcher(token1, token2))
+            if anybefore:
+                # Mark to the first token in the merged list that there were
+                # some skipped tokens ie characters before this token pair
+                mergedlist[0].anybefore = True
+            tokens.extend(mergedlist)
+
+        c = Cluster()
+        c.set_tokens(tokens)
+        return c
 
     def __str__(self):
         return self.prog.pattern
 
     def to_text(self, gapmarker='@@'):
         """Convert cluster to text representation, using gapmarker
-           in place of .* (anything) and unescaping all else"""
-        return re.sub(r'\\([^\\])', r'\1', self.prog.pattern.replace('.*', gapmarker))
+           in place of .* (anything) and plain unescaped text for all else"""
+
+        text = ""
+        for t in self.tokens:
+            if t.anybefore:
+                text = text + gapmarker
+            text = text + str(t)
+        return text
 
     def matches_line(self, line):
         """Check if the cluster pattern matches the given line
@@ -62,17 +91,16 @@ class Cluster(object):
         :returns: True if matches (ie. this cluster replaces the other one)
         """
 
-        # In cluster patterns, special regex characters like dot and asterix are
-        # escaped by a backslash
-        # To check if the cluster patterns overlap, first unescape the other one
-        otherpattern = re.sub(r'\\([^\\])', r'\1', other.prog.pattern)
-        return self.matches_line(otherpattern)
+        # This cluster regex should accept larger set of texts than the other
+        # and match the other cluster text representation given a random gapmarker
+        return self.matches_line(other.to_text(gapmarker='@@@###@@@'))
 
     def construct_merge_sequence(self, other, minsimilarity, matchercache):
         """Construct a merge sequence merging this cluster with another one
 
         :param other: the other cluster to merge with
         :param minsimilarity: min similarity in order to merge two tokens (0.0-1.0)
+        :param matchercache: SequenceMatcherCache object for this cluster merge
         :returns: merged cluster object or None is clusters are not similar enough
         """
 
@@ -93,20 +121,20 @@ class Cluster(object):
                 for jdx in range(startjdx, len(other.tokens)):
                     token1 = self.tokens[idx]
                     token2 = other.tokens[jdx]
-                    if token1.len() == 0 or token2.len() == 0:
+                    if token1.len == 0 or token2.len == 0:
                         # Empty filler token (should be last token in cluster)
                         continue
-                    m = matchercache.get(token1, token2)
-                    if matcher.real_quick_ratio() >= minsimilarity:
-                        weight = m.ratio() * (token1.len()+token2.len()) * 0.5
-                        if weight >= minsimilarity:
+                    m = matchercache.get_matcher(token1, token2)
+                    if m.real_quick_ratio() >= minsimilarity:
+                        ratio = m.ratio()
+                        if ratio >= minsimilarity:
                             # Tokens are similar enough so that we can branch
                             # into a new merge sequence path
+                            weight = ratio * (token1.len+token2.len) * 0.5
                             seq2 = MergeSequence(seq, token1, token2,
                                                  idx>startidx or jdx>startjdx,
                                                  weight)
-                            if idx+1 < len(self.tokens) or 
-                               jdx+1 < len(other.tokens):
+                            if idx+1 < len(self.tokens) or jdx+1 < len(other.tokens):
                                 # Add the sequence to the working queue
                                 work_queue.append((idx+1, jdx+1, seq2))
                             else:

@@ -15,9 +15,10 @@ class Token(object):
         """
         self.text = text
         self.anybefore = anybefore
+        self.len = len(text)
 
-    def len():
-        return len(self.text)
+    def __str__(self):
+        return self.text
 
     def to_regex(self):
         """Convert this token to a regex string"""
@@ -56,15 +57,15 @@ class Token(object):
             elif len(mergepattern) == 0 and (i > 0 or j > 0):
                 # This is the first similar text block but there are
                 # characters before them that could not be merged
-                tokens.append(Token(self.text[j:j+n], anybefore=True))
+                tokens.append(Token(self.text[i:i+n], anybefore=True))
             elif len(mergepattern) == 0:
                 # This is the first similar text block and there are
                 # no characters before them ie. it starts both tokens
-                tokens.append(Token(self.text[j:j+n], anybefore=False))
+                tokens.append(Token(self.text[i:i+n], anybefore=False))
             else:
                 # This is nth text block and there are characters after
                 # the previous detected text block
-                tokens.append(Token(self.text[j:j+n], anybefore=True))
+                tokens.append(Token(self.text[i:i+n], anybefore=True))
             latestpos1 = i+n
             latestpos2 = j+n
 

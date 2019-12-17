@@ -2,6 +2,7 @@
 
 import re
 from Cluster import Cluster
+from MergeSequenceCache import MergeSequenceCache
 
 
 class Analyzer(object):
@@ -28,7 +29,7 @@ class Analyzer(object):
             self.clusters = []
         else:
             self.clusters = cluster_list
-        self.mergeseqcache = MergeSequenceCache()
+        self.mergeseqcache = MergeSequenceCache(minsimilarity)
 
     def __str__(self):
         mystr = ""
@@ -65,7 +66,11 @@ class Analyzer(object):
             c1 = self.clusters[idx]
             for jdx in range(idx+1, listlen):
                 c2 = self.clusters[jdx]
-                ratio = 2.0 * mergeseqcache.get(c1, c2) / (c1.len + c2.len)
+                seq = mergeseqcache.get_merge_sequence(c1, c2)
+                if seq is None:
+                    # Clusters are not similar enough for merge
+                    continue
+                ratio = 2.0 * seq.weight / (c1.len + c2.len)
                 if ratio > maxratio:
                     maxratio = ratio
                     similar_c1 = c1
@@ -81,8 +86,8 @@ class Analyzer(object):
             self.clusters.pop(0)
             return c
 
-        mergeseq = mergeseqcache.get(c1, c2)
-        merged_cluster = mergeseq.generate_cluster(mergeseqcache.getmatchercache(c1))
+        mergeseq = mergeseqcache.get_merge_sequence(similar_c1, similar_c2)
+        merged_cluster = Cluster.new_cluster_from_merge_sequence(mergeseq, mergeseqcache.getmatchercache(c1))
 
         # Next remove all clusters from the list which match the new one
         # Use unescaped version of cluster sequence in match comparison
