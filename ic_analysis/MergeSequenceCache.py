@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 import re
+from SequenceMatcherCache import SequenceMatcherCache
 
 
 class MergeSequenceCache(object):
@@ -36,22 +37,22 @@ class MergeSequenceCache(object):
             return self.cache.get((c2, c1))
 
         # Not found in cache, so generate it
-        seq = c1.construct_merge_sequence(c2, self.minsimilarity, matchercache)
+        seq = c1.construct_merge_sequence(c2, self.minsimilarity, self.get_sequence_matcher(c1, c2))
         self.cache[(c1, c1)] = seq
         return seq
 
-    def get_sequence_matcher(self, token1, token2):
+    def get_sequence_matcher(self, c1, c2):
         """Gets/constructs a sequence matcher cache for two clusters
 
         :returns: SequenceMatcherCache object
         """
 
-        cacheobj = self.matchercache.get((c1, c2))
+        cacheobj = self.seqmatchercache.get((c1, c2))
         if cacheobj:
             return cacheobj
 
         m = SequenceMatcherCache()
-        matchercache[(token1, token2)] = m
+        self.seqmatchercache[(c1, c2)] = m
         return m
 
     def remove_cluster(self, c):

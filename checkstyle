@@ -36,9 +36,11 @@
 ./ic_analysis/Analyzer.py:22:80: E501 line too long (84 > 79 characters)
 ./ic_analysis/Analyzer.py:79:80: E501 line too long (85 > 79 characters)
 ./ic_analysis/Analyzer.py:84:80: E501 line too long (85 > 79 characters)
-./ic_analysis/Analyzer.py:90:80: E501 line too long (109 > 79 characters)
-./ic_analysis/Analyzer.py:98:54: E713 test for membership should be 'not in'
-./ic_analysis/Analyzer.py:98:80: E501 line too long (81 > 79 characters)
+./ic_analysis/Analyzer.py:89:80: E501 line too long (80 > 79 characters)
+./ic_analysis/Analyzer.py:90:80: E501 line too long (81 > 79 characters)
+./ic_analysis/Analyzer.py:91:80: E501 line too long (83 > 79 characters)
+./ic_analysis/Analyzer.py:99:54: E713 test for membership should be 'not in'
+./ic_analysis/Analyzer.py:99:80: E501 line too long (81 > 79 characters)
 ./ic_analysis/log_cluster_analysis.py:20:80: E501 line too long (97 > 79 characters)
 ./ic_analysis/log_cluster_analysis.py:21:80: E501 line too long (91 > 79 characters)
 ./ic_analysis/log_cluster_analysis.py:23:80: E501 line too long (90 > 79 characters)
@@ -49,3 +51,4 @@
 ./ic_analysis/log_cluster_analysis.py:37:80: E501 line too long (114 > 79 characters)
 ./ic_analysis/log_cluster_analysis.py:52:1: E305 expected 2 blank lines after class or function definition, found 1
 ./ic_analysis/MergeSequence.py:39:80: E501 line too long (84 > 79 characters)
+./ic_analysis/MergeSequenceCache.py:40:80: E501 line too long (100 > 79 characters)

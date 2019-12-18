@@ -66,7 +66,7 @@ class Analyzer(object):
             c1 = self.clusters[idx]
             for jdx in range(idx+1, listlen):
                 c2 = self.clusters[jdx]
-                seq = mergeseqcache.get_merge_sequence(c1, c2)
+                seq = self.mergeseqcache.get_merge_sequence(c1, c2)
                 if seq is None:
                     # Clusters are not similar enough for merge
                     continue
@@ -86,15 +86,16 @@ class Analyzer(object):
             self.clusters.pop(0)
             return c
 
-        mergeseq = mergeseqcache.get_merge_sequence(similar_c1, similar_c2)
-        merged_cluster = Cluster.new_cluster_from_merge_sequence(mergeseq, mergeseqcache.getmatchercache(c1))
+        mergeseq = self.mergeseqcache.get_merge_sequence(similar_c1, similar_c2)
+        matcher = self.mergeseqcache.get_sequence_matcher(similar_c1, similar_c2)
+        merged_cluster = Cluster.new_cluster_from_merge_sequence(mergeseq, matcher)
 
         # Next remove all clusters from the list which match the new one
         # Use unescaped version of cluster sequence in match comparison
         clusters_to_remove = [c for c in self.clusters
                               if merged_cluster.matches_cluster(c)]
         for c in clusters_to_remove:
-            mergeseqcache.remove_cluster(c)
+            self.mergeseqcache.remove_cluster(c)
         self.clusters = [c for c in self.clusters if not c in clusters_to_remove]
         self.clusters.append(merged_cluster)
 
