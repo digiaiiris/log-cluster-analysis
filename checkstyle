@@ -21,6 +21,11 @@
 ./tests/test_cluster.py:37:45: E231 missing whitespace after ','
 ./tests/test_cluster.py:38:80: E501 line too long (108 > 79 characters)
 ./tests/test_cluster.py:45:80: E501 line too long (117 > 79 characters)
+./tests/test_merge_sequence_cache.py:16:45: E251 unexpected spaces around keyword / parameter equals
+./tests/test_merge_sequence_cache.py:16:47: E251 unexpected spaces around keyword / parameter equals
+./tests/test_merge_sequence_cache.py:38:45: E251 unexpected spaces around keyword / parameter equals
+./tests/test_merge_sequence_cache.py:38:47: E251 unexpected spaces around keyword / parameter equals
+./tests/test_merge_sequence_cache.py:56:1: E305 expected 2 blank lines after class or function definition, found 1
 ./ic_analysis/Cluster.py:52:80: E501 line too long (87 > 79 characters)
 ./ic_analysis/Cluster.py:95:80: E501 line too long (82 > 79 characters)
 ./ic_analysis/Cluster.py:102:80: E501 line too long (83 > 79 characters)
@@ -51,4 +56,4 @@
 ./ic_analysis/log_cluster_analysis.py:37:80: E501 line too long (114 > 79 characters)
 ./ic_analysis/log_cluster_analysis.py:52:1: E305 expected 2 blank lines after class or function definition, found 1
 ./ic_analysis/MergeSequence.py:39:80: E501 line too long (84 > 79 characters)
-./ic_analysis/MergeSequenceCache.py:40:80: E501 line too long (100 > 79 characters)
+./ic_analysis/MergeSequenceCache.py:41:80: E501 line too long (80 > 79 characters)

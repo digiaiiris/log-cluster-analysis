@@ -8,7 +8,7 @@ import pprint
 class TestCluster(unittest.TestCase):
 
     def test_simple_analysis(self):
-        a = Analyzer.Analyzer(hardmaxlimit=2)
+        a = Analyzer.Analyzer(hardmaxlimit=2, minsimilarity=0.3)
         c1 = a.analyze_line('abc def ghi')
         self.assertEqual(c1.to_text(), 'abc def ghi', str(a))
 
