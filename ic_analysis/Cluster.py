@@ -56,6 +56,19 @@ class Cluster(object):
                 mergedlist[0].anybefore = True
             tokens.extend(mergedlist)
 
+        # Token merge may end up with an end filler (empty token with anybefore=True)
+        # that is in the midst of the cluster.
+        # Replace them with anybefore=True on the next token in the cluster
+        tokens_to_remove = []
+        for idx in range(len(tokens) - 1):
+            if tokens[idx].len == 0:
+                tokens[idx + 1].anybefore = True
+
+                # Insert at the beginning so the removing will be done from end to beginning
+                tokens_to_remove.insert(0, idx)
+        for idx in tokens_to_remove:
+            del tokens[idx]
+
         c = Cluster()
         c.set_tokens(tokens)
         return c

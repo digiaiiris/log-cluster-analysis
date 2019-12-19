@@ -53,6 +53,18 @@ class TestCluster(unittest.TestCase):
         self.assertEqual(c3.to_text(), 'abc @@',
                          'merge failed with ' + c3.to_text())
 
+    def test_merge_overlapping(self):
+        c1 = Cluster()
+        c1.set_tokens([Token('abc'), Token('def')])
+        c2 = Cluster()
+        c2.set_tokens([Token('abcd'), Token('ef')])
+        m = SequenceMatcherCache()
+        seq = c1.construct_merge_sequence(c2, 0.5, m)
+        c3 = Cluster.new_cluster_from_merge_sequence(seq, m)
+        self.assertEqual(c3.to_text(), 'abc@@ef',
+                         'merge failed with ' + c3.to_text())
+
+
     def test_simple_merge_line_end(self):
         c1 = Cluster('abc ghi')
         c2 = Cluster('def yyy ghi')

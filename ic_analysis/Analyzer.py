@@ -57,7 +57,7 @@ class Analyzer(object):
         if len(self.clusters) <= self.softmaxlimit:
             # Maximum number not reached, use the line per-se as a cluster
             if self.debug:
-                print("Line " + line + ": Add as a cluster per-se because cluster number is lower that soft limit")
+                print(line + ": Add as a cluster per-se because cluster number is lower that soft limit")
             return cluster
 
         # Maximum number exceeded, must merge two clusters in the list
@@ -83,14 +83,14 @@ class Analyzer(object):
         if maxratio < self.minsimilarity and len(self.clusters) <= self.hardmaxlimit:
             # No cluster with enough resemblance to each other
             if self.debug:
-                print("Line " + line + ": Add as a cluster per-se because no similar enough clusters found and hard limit of cluster number not yet reached")
+                print(line + ": Add as a cluster per-se because no similar enough clusters found and hard limit of cluster number not yet reached")
             return cluster
 
         if maxratio == 0:
             # Hard max number of clusters exceeded but no cluster resemble each other
             # Just remove the oldest one
             if self.debug:
-                print("Line " + line + ": Add as a cluster per-se and remove oldest cluster because no other clusters were similar enough for merge. Removed cluster is: " + str(self.cluster[0]))
+                print(line + ": Add as a cluster per-se and remove oldest cluster because no other clusters were similar enough for merge. Removed cluster is: " + str(self.cluster[0]))
             self.clusters.pop(0)
             return cluster
 
@@ -103,6 +103,8 @@ class Analyzer(object):
         clusters_to_remove = [c for c in self.clusters
                               if merged_cluster.matches_cluster(c)]
         for c in clusters_to_remove:
+            if self.debug:
+                print("Remove cluster " + str(c))
             self.mergeseqcache.remove_cluster(c)
         self.clusters = [c for c in self.clusters if c not in clusters_to_remove]
         self.clusters.append(merged_cluster)
@@ -111,11 +113,11 @@ class Analyzer(object):
         # it was already merged
         if cluster in self.clusters:
             if self.debug:
-                print("Line " + line + ": Add as a cluster per-se and merge " + len(cluster_to_merge) + " existing clusters to a new one: " + str(merged_cluster))
+                print(line + ": Add as a cluster per-se and merge " + str(len(clusters_to_remove)) + " existing clusters to a new one: " + str(merged_cluster))
             return cluster
         else:
             if self.debug:
-                print("Line " + line + ": Merge " + len(cluster_to_merge) + " existing clusters to a new one which also matches this line: " + str(merged_cluster))
+                print(line + ": Merge " + str(len(clusters_to_remove)) + " existing clusters to a new one which also matches this line: " + str(merged_cluster))
             return merged_cluster
 
 
