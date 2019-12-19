@@ -13,7 +13,7 @@ class TestMergeSequenceCache(unittest.TestCase):
         c1 = Cluster('abcdef')
         c2 = Cluster('abcdef1')
         c3 = Cluster('abcdef2')
-        m = MergeSequenceCache(minsimilarity = 0.5)
+        m = MergeSequenceCache(minsimilarity=0.5)
 
         # Test that caching works and clusters are interchangable in cache
         seq_c1_c2 = m.get_merge_sequence(c1, c2)
@@ -35,7 +35,7 @@ class TestMergeSequenceCache(unittest.TestCase):
         c1 = Cluster('abcdef')
         c2 = Cluster('abcdef1')
         c3 = Cluster('abcdef2')
-        m = MergeSequenceCache(minsimilarity = 0.5)
+        m = MergeSequenceCache(minsimilarity=0.5)
 
         # Test that caching works and clusters are not interchangable in cache
         m_c1_c2 = m.get_sequence_matcher(c1, c2)
@@ -52,6 +52,7 @@ class TestMergeSequenceCache(unittest.TestCase):
         m_new_c1_c3 = m.get_sequence_matcher(c1, c3)
         self.assertIsNot(m_c1_c2, m_new_c1_c2)
         self.assertIs(m_c1_c3, m_new_c1_c3)
+
 
 if __name__ == '__main__':
     unittest.main()

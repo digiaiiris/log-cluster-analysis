@@ -108,7 +108,7 @@ class Cluster(object):
         #  - index reached in this cluster token list
         #  - index reached in the other cluster's token list
         #  - MergeSequence object constructed so far
-        work_queue = [(0,0,None)]
+        work_queue = [(0, 0, None)]
 
         # Find a merge sequence with a maximum weight ie. similar subsequent matches
         maxweight = 0
@@ -132,7 +132,7 @@ class Cluster(object):
                             # into a new merge sequence path
                             weight = ratio * (token1.len+token2.len) * 0.5
                             seq2 = MergeSequence(seq, token1, token2,
-                                                 idx>startidx or jdx>startjdx,
+                                                 idx > startidx or jdx > startjdx,
                                                  weight)
                             if idx+1 < len(self.tokens) or jdx+1 < len(other.tokens):
                                 # Add the sequence to the working queue

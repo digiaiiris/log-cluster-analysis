@@ -18,7 +18,7 @@ class TestCluster(unittest.TestCase):
 
     def test_simple_match_tokens(self):
         c = Cluster()
-        c.set_tokens([Token('abc'),Token('def',anybefore=True)])
+        c.set_tokens([Token('abc'), Token('def', anybefore=True)])
         self.assertTrue(c.matches_line('abc XYZ def'), 'match fails with ' + str(c))
         self.assertTrue(c.matches_line('abcdef'), 'match fails with ' + str(c))
         self.assertFalse(c.matches_line('.. abc def'), 'match fails with ' + str(c))
@@ -26,15 +26,15 @@ class TestCluster(unittest.TestCase):
 
     def test_cluster_match(self):
         c1 = Cluster()
-        c1.set_tokens([Token('abc'),Token('def',anybefore=True),Token('',anybefore=True)])
+        c1.set_tokens([Token('abc'), Token('def', anybefore=True), Token('', anybefore=True)])
         c2 = Cluster()
-        c2.set_tokens([Token('abc'),Token('def',anybefore=True)])
+        c2.set_tokens([Token('abc'), Token('def', anybefore=True)])
         self.assertTrue(c1.matches_cluster(c2), 'cluster match failed with ' + str(c1) + " and " + str(c2))
         c3 = Cluster()
-        c3.set_tokens([Token('abcdef'),Token(r'\\.* ^',anybefore=True)])
+        c3.set_tokens([Token('abcdef'), Token(r'\\.* ^', anybefore=True)])
         self.assertTrue(c1.matches_cluster(c3), 'cluster match failed with ' + str(c1) + " and " + str(c3))
         c4 = Cluster()
-        c4.set_tokens([Token('abc'),Token('',anybefore=True)])
+        c4.set_tokens([Token('abc'), Token('', anybefore=True)])
         self.assertFalse(c1.matches_cluster(c4), 'cluster match failed with ' + str(c1) + " and " + str(c4))
 
     def test_merge_sequence(self):

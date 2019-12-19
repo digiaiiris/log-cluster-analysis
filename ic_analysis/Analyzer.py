@@ -96,7 +96,7 @@ class Analyzer(object):
                               if merged_cluster.matches_cluster(c)]
         for c in clusters_to_remove:
             self.mergeseqcache.remove_cluster(c)
-        self.clusters = [c for c in self.clusters if not c in clusters_to_remove]
+        self.clusters = [c for c in self.clusters if c not in clusters_to_remove]
         self.clusters.append(merged_cluster)
 
         # Return either the newly created cluster or the merged one if

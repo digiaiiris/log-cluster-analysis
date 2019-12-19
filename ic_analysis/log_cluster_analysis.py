@@ -10,6 +10,8 @@ def main(args=None):
         description="Analyze log lines into clusters"
     )
 
+    parser.add_argument("--debug", type=bool, constr=True, default=False, nargs='?',
+                        help="Debug output of cluster analysis")
     parser.add_argument("--clusterstatefile", type=str, default=None,
                         help="Path to cluster states which gets updated")
     parser.add_argument("--softmaxlimit", type=int, default=10,
@@ -30,7 +32,8 @@ def main(args=None):
                         help="Text representation of cluster gaps (regex .*) when using printclusterstext")
     args = parser.parse_args(args)
 
-#    if not args.clusterstatefile is None:
+    if args.clusterstatefile:
+        raise NotImplementedError("--clusterstatefile is not yet implemented")
 #        # Read cluster list from file, written by the previous run
 #        a = open('/tmp/file.py', 'r')
 
@@ -48,6 +51,10 @@ def main(args=None):
     if args.printclusterstext:
         for c in a.clusters:
             print(c.to_text(gapmarker=args.gapmarker))
+
+    if args.printsummary:
+        raise NotImplementedError("--printsummary is not yet implemented")
+
 
 if __name__ == "__main__":
     main()
