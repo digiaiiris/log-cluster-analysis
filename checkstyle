@@ -1,0 +1,6 @@
+./ic_analysis/Analyzer.py:86:121: E501 line too long (157 > 120 characters)
+./ic_analysis/Analyzer.py:93:121: E501 line too long (194 > 120 characters)
+./ic_analysis/Analyzer.py:114:121: E501 line too long (162 > 120 characters)
+./ic_analysis/Analyzer.py:118:121: E501 line too long (163 > 120 characters)
+./ic_analysis/log_cluster_analysis.py:40:121: E501 line too long (132 > 120 characters)
+./ic_analysis/MergeSequence.py:54:1: W293 blank line contains whitespace

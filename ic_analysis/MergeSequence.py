@@ -45,6 +45,12 @@ class MergeSequence(object):
 
         return pairs
 
+    def __str__(self):
+        text = ""
+        for t1, t2, anybefore in self.to_list():
+            text = text + "[" + t1.text + "==" + t2.text + "]"
+        return text
 
+        
 if __name__ == "__main__":
     pass

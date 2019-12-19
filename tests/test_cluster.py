@@ -119,6 +119,42 @@ class TestCluster(unittest.TestCase):
         self.assertEqual(c3.to_text(), r'ÄÄ@@ abc@@ Å@@',
                          'merge failed with ' + c3.to_text())
 
+    def test_merge_tokens_last_matching_partially(self):
+        c1 = Cluster()
+        c1.set_tokens([Token('abc'), Token('deftext', anybefore=True)])
+        c2 = Cluster()
+        c2.set_tokens([Token('abc'), Token('deftext2', anybefore=True)])
+        m = SequenceMatcherCache()
+        seq = c1.construct_merge_sequence(c2, 0.5, m)
+        self.assertEqual(str(seq), '[abc==abc][deftext==deftext2]', 'Sequence was ' + str(seq))
+
+    def test_merge_tokens_last_matching_first(self):
+        c1 = Cluster()
+        c1.set_tokens([Token('abc'), Token('def', anybefore=True)])
+        c2 = Cluster()
+        c2.set_tokens([Token('def'), Token('yyyyy', anybefore=True)])
+        m = SequenceMatcherCache()
+        seq = c1.construct_merge_sequence(c2, 0.5, m)
+        self.assertEqual(str(seq), '[def==def][==]', 'Sequence was ' + str(seq))
+
+    def test_merge_tokens_last_of_second_matching_from_first(self):
+        c1 = Cluster()
+        c1.set_tokens([Token('abc'), Token('def', anybefore=True)])
+        c2 = Cluster()
+        c2.set_tokens([Token('yyy'), Token('abc', anybefore=True)])
+        m = SequenceMatcherCache()
+        seq = c1.construct_merge_sequence(c2, 0.5, m)
+        self.assertEqual(str(seq), '[abc==abc][==]', 'Sequence was ' + str(seq))
+
+    def test_merge_clusters_with_one_token(self):
+        c1 = Cluster()
+        c1.set_tokens([Token('abc')])
+        c2 = Cluster()
+        c2.set_tokens([Token('abc')])
+        m = SequenceMatcherCache()
+        seq = c1.construct_merge_sequence(c2, 0.5, m)
+        self.assertEqual(str(seq), '[abc==abc]', 'Sequence was ' + str(seq))
+
 
 if __name__ == '__main__':
     unittest.main()

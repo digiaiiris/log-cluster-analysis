@@ -8,7 +8,7 @@ from MergeSequenceCache import MergeSequenceCache
 class Analyzer(object):
     """Analyzer receives lines and clusters them"""
 
-    def __init__(self, softmaxlimit=10, hardmaxlimit=25, minsimilarity=0.6, clusterlist=None):
+    def __init__(self, softmaxlimit=10, hardmaxlimit=25, minsimilarity=0.6, clusterlist=None, debug=False):
         """Initializes Cluster object
 
         :param softmaxlimit (optional): soft maximum number of Clusters to form
@@ -16,6 +16,7 @@ class Analyzer(object):
         :param minsimilarity (optiona): how similar lines must be in oder to be
                merged into a cluster: 0.0 no similarity, 1.0 completely similar
         :param clusterlist (optional): list of Cluster objects to start with
+        :param debug (optional): print debug output
         """
 
         if not (minsimilarity > 0 and minsimilarity < 1):
@@ -30,6 +31,7 @@ class Analyzer(object):
         else:
             self.clusters = cluster_list
         self.mergeseqcache = MergeSequenceCache(minsimilarity)
+        self.debug = debug
 
     def __str__(self):
         mystr = ""
@@ -49,12 +51,14 @@ class Analyzer(object):
                 return c
 
         # Append the line as a cluster per-se
-        c = Cluster(line)
-        self.clusters.append(c)
+        cluster = Cluster(line)
+        self.clusters.append(cluster)
 
         if len(self.clusters) <= self.softmaxlimit:
             # Maximum number not reached, use the line per-se as a cluster
-            return c
+            if self.debug:
+                print("Line " + line + ": Add as a cluster per-se because cluster number is lower that soft limit")
+            return cluster
 
         # Maximum number exceeded, must merge two clusters in the list
         # Find the most similar clusters and merge them
@@ -78,13 +82,17 @@ class Analyzer(object):
 
         if maxratio < self.minsimilarity and len(self.clusters) <= self.hardmaxlimit:
             # No cluster with enough resemblance to each other
-            return c
+            if self.debug:
+                print("Line " + line + ": Add as a cluster per-se because no similar enough clusters found and hard limit of cluster number not yet reached")
+            return cluster
 
         if maxratio == 0:
             # Hard max number of clusters exceeded but no cluster resemble each other
             # Just remove the oldest one
+            if self.debug:
+                print("Line " + line + ": Add as a cluster per-se and remove oldest cluster because no other clusters were similar enough for merge. Removed cluster is: " + str(self.cluster[0]))
             self.clusters.pop(0)
-            return c
+            return cluster
 
         mergeseq = self.mergeseqcache.get_merge_sequence(similar_c1, similar_c2)
         matcher = self.mergeseqcache.get_sequence_matcher(similar_c1, similar_c2)
@@ -101,9 +109,13 @@ class Analyzer(object):
 
         # Return either the newly created cluster or the merged one if
         # it was already merged
-        if c in self.clusters:
-            return c
+        if cluster in self.clusters:
+            if self.debug:
+                print("Line " + line + ": Add as a cluster per-se and merge " + len(cluster_to_merge) + " existing clusters to a new one: " + str(merged_cluster))
+            return cluster
         else:
+            if self.debug:
+                print("Line " + line + ": Merge " + len(cluster_to_merge) + " existing clusters to a new one which also matches this line: " + str(merged_cluster))
             return merged_cluster
 
 

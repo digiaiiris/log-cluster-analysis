@@ -146,9 +146,9 @@ class Cluster(object):
                 # Not matching token pair found after this merge sequence
                 # End the merge sequence here
                 if seq and seq.weight > maxweight:
-                    if startidx+1 < len(self.tokens) or startjdx+1 < len(other.tokens):
-                        # Not reached the end of clusters, add an end filler
-                        seq.add_pair(Token(''), Token(''), True, 0)
+                    if startidx < len(self.tokens) or startjdx < len(other.tokens):
+                        # No matching at the end of clusters, add an end filler
+                        seq = MergeSequence(seq, Token(''), Token(''), True, 0)
                     maxweight = seq.weight
                     maxseq = seq
 

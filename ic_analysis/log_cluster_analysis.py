@@ -10,7 +10,7 @@ def main(args=None):
         description="Analyze log lines into clusters"
     )
 
-    parser.add_argument("--debug", type=bool, constr=True, default=False, nargs='?',
+    parser.add_argument("--debug", type=bool, const=True, default=False, nargs='?',
                         help="Debug output of cluster analysis")
     parser.add_argument("--clusterstatefile", type=str, default=None,
                         help="Path to cluster states which gets updated")
@@ -37,7 +37,7 @@ def main(args=None):
 #        # Read cluster list from file, written by the previous run
 #        a = open('/tmp/file.py', 'r')
 
-    a = Analyzer(softmaxlimit=args.softmaxlimit, hardmaxlimit=args.hardmaxlimit, minsimilarity=args.minsimilarity)
+    a = Analyzer(softmaxlimit=args.softmaxlimit, hardmaxlimit=args.hardmaxlimit, minsimilarity=args.minsimilarity, debug=args.debug)
     for line in sys.stdin:
         a.analyze_line(line.rstrip())
         if args.printprogress:
