@@ -8,19 +8,24 @@ from MergeSequence import MergeSequence
 class Cluster(object):
     """Analyzed cluster"""
 
-    def __init__(self, line=None):
+    def __init__(self, line=None, lastlinecount=0):
         """Initializes Cluster object with the given line
 
-        :param line (optiona): line that is used per-se as a cluster
+        :param line (optional): line that is used per-se as a cluster
+        :param lastlinecount (optional): line count number when the cluster was encountered
         """
 
         if line:
             self.tokens = [Token(line)]
-            self.len = len(line)
+            self.minlen = len(line)
+            self.maxlen = len(line)
             self.prog = re.compile('^' + re.escape(line) + '$')
         else:
             self.tokens = []
-            self.len = 0
+            self.minlen = 0
+            self.maxlen = 0
+        self.lastlinecount = lastlinecount
+        self.findcount = 1
 
     def set_tokens(self, tokens):
         """Set a token list to this cluster"""
@@ -34,9 +39,11 @@ class Cluster(object):
             pattern = pattern + t.to_regex()
         pattern = pattern + '$'
         self.prog = re.compile(pattern)
-        self.len = 0
+        self.minlen = 0
+        self.maxlen = 0
         for t in self.tokens:
-            self.len = self.len + t.len
+            self.minlen = self.minlen + t.minlen
+            self.maxlen = self.maxlen + t.maxlen
 
     @staticmethod
     def new_cluster_from_merge_sequence(seq, matchercache):
@@ -48,21 +55,23 @@ class Cluster(object):
         """
 
         tokens = []
-        for token1, token2, anybefore in seq.to_list():
+        for token1, token2, minwildcards, maxwildcards in seq.to_list():
             mergedlist = token1.merge(token2, matchercache.get_matcher(token1, token2))
-            if anybefore:
-                # Mark to the first token in the merged list that there were
-                # some skipped tokens ie characters before this token pair
-                mergedlist[0].anybefore = True
+
+            # Add the number of wildcards ie. characters that were skipped before this token pair
+            mergedlist[0].minwildcards += minwildcards
+            mergedlist[0].maxwildcards += maxwildcards
+
             tokens.extend(mergedlist)
 
         # Token merge may end up with an end filler (empty token with anybefore=True)
         # that is in the midst of the cluster.
-        # Replace them with anybefore=True on the next token in the cluster
+        # Replace them by adding the number of wildcards to the next token in the cluster
         tokens_to_remove = []
         for idx in range(len(tokens) - 1):
             if tokens[idx].len == 0:
-                tokens[idx + 1].anybefore = True
+                tokens[idx + 1].minwildcards += tokens[idx].minwildcards
+                tokens[idx + 1].maxwildcards += tokens[idx].maxwildcards
 
                 # Insert at the beginning so the removing will be done from end to beginning
                 tokens_to_remove.insert(0, idx)
@@ -78,12 +87,12 @@ class Cluster(object):
 
     def to_text(self, gapmarker='@@'):
         """Convert cluster to text representation, using gapmarker
-           in place of .* (anything) and plain unescaped text for all else"""
+           in place of wildcards and using plain unescaped text for all else"""
 
         text = ""
         for t in self.tokens:
-            if t.anybefore:
-                text = text + gapmarker
+            if t.minwildcards > 0 or t.maxwildcards > 0:
+                text = text + gapmarker + str(t.minwildcards) + ',' + str(t.maxwildcards) + gapmarker
             text = text + str(t)
         return text
 
@@ -98,21 +107,12 @@ class Cluster(object):
         else:
             return True
 
-    def matches_cluster(self, other):
-        """Check if the cluster pattern matches the other cluster pattern
-
-        :returns: True if matches (ie. this cluster replaces the other one)
-        """
-
-        # This cluster regex should accept larger set of texts than the other
-        # and match the other cluster text representation given a random gapmarker
-        return self.matches_line(other.to_text(gapmarker='@@@###@@@'))
-
-    def construct_merge_sequence(self, other, minsimilarity, matchercache):
+    def construct_merge_sequence(self, other, minsimilarity, minprecision, matchercache):
         """Construct a merge sequence merging this cluster with another one
 
         :param other: the other cluster to merge with
         :param minsimilarity: min similarity in order to merge two tokens (0.0-1.0)
+        :param minprecision: min precision in order to merge two clusters (0.0-1.0)
         :param matchercache: SequenceMatcherCache object for this cluster merge
         :returns: merged cluster object or None is clusters are not similar enough
         """
@@ -123,8 +123,8 @@ class Cluster(object):
         #  - MergeSequence object constructed so far
         work_queue = [(0, 0, None)]
 
-        # Find a merge sequence with a maximum weight ie. similar subsequent matches
-        maxweight = 0
+        # Find a merge sequence with a maximum precision ie. similar subsequent matches
+        maxprecision = 0
         maxseq = None
 
         while len(work_queue) > 0:
@@ -144,25 +144,58 @@ class Cluster(object):
                             # Tokens are similar enough so that we can branch
                             # into a new merge sequence path
                             weight = ratio * (token1.len+token2.len) * 0.5
+
+                            # Calculate min and max number of wildcards since the last token
+                            # in the merge sequence, ie. the length of the tokens skipped
+                            minwildcards1 = 0
+                            maxwildcards1 = 0
+                            minwildcards2 = 0
+                            maxwildcards2 = 0
+                            for kdx in range(startidx, idx):
+                                minwildcards1 += self.tokens[kdx].minlen
+                                maxwildcards1 += self.tokens[kdx].maxlen
+                            for kdx in range(startjdx, jdx):
+                                minwildcards2 += other.tokens[kdx].minlen
+                                maxwildcards2 += other.tokens[kdx].maxlen
+
+                            # Extend the merge sequence to this token pair
                             seq2 = MergeSequence(seq, token1, token2,
-                                                 idx > startidx or jdx > startjdx,
+                                                 min(minwildcards1, minwildcards2),
+                                                 max(maxwildcards1, maxwildcards2),
                                                  weight)
                             if idx+1 < len(self.tokens) or jdx+1 < len(other.tokens):
                                 # Add the sequence to the working queue
                                 work_queue.append((idx+1, jdx+1, seq2))
                             else:
                                 # Finished to the end of both clusters
-                                if seq2.weight > maxweight:
-                                    maxweight = seq2.weight
+                                # Take only the merge sequence with the maximum precision and forget all others
+                                if seq2.precision > maxprecision:
+                                    maxprecision = seq2.precision
                                     maxseq = seq2
             if not foundmatching:
                 # Not matching token pair found after this merge sequence
                 # End the merge sequence here
-                if seq and seq.weight > maxweight:
+                if seq and seq.precision > maxprecision:
                     if startidx < len(self.tokens) or startjdx < len(other.tokens):
                         # No matching at the end of clusters, add an end filler
-                        seq = MergeSequence(seq, Token(''), Token(''), True, 0)
-                    maxweight = seq.weight
+
+                        # Calculate min and max number of wildcards until the last token
+                        # in the merge sequence, ie. the length of the tokens skipped
+                        minwildcards1 = 0
+                        maxwildcards1 = 0
+                        minwildcards2 = 0
+                        maxwildcards2 = 0
+                        for kdx in range(startidx, len(self.tokens)):
+                            minwildcards1 += self.tokens[kdx].minlen
+                            maxwildcards1 += self.tokens[kdx].maxlen
+                        for kdx in range(startjdx, len(other.tokens)):
+                            minwildcards2 += other.tokens[kdx].minlen
+                            maxwildcards2 += other.tokens[kdx].maxlen
+
+                        seq = MergeSequence(seq, Token(''), Token(''),
+                                            min(minwildcards1, minwildcards2),
+                                            max(maxwildcards1, maxwildcards2), 0)
+                    maxprecision = seq.precision
                     maxseq = seq
 
         return maxseq

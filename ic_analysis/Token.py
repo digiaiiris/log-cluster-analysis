@@ -6,24 +6,28 @@ import re
 class Token(object):
     """Token inside a cluster"""
 
-    def __init__(self, text, anybefore=False):
+    def __init__(self, text, minwildcards=0, maxwildcards=0):
         """Initializes Token object
 
         :param text: String that this token represents
-        :param anybefore (optional): True if there can be anything before
-                                     this token (ie. .* before token)
+        :param minwildcards (optional): Minimum number of wildcards to be matched before the token
+        :param maxwildcards (optional): Maximum number of wildcards to be matched before the token
         """
         self.text = text
-        self.anybefore = anybefore
-        self.len = len(text)
+        self.minwildcards = minwildcards
+        self.maxwildcards = maxwildcards
+        self.minlen = len(text) + minwildcards
+        self.maxlen = len(text) + maxwildcards
 
     def __str__(self):
+        if self.minwildcards > 0 or self.maxwildcards > 0:
+            return '+{' + str(self.minwildcards) + ',' + str(self.maxwildcards) + '}' + self.text
         return self.text
 
     def to_regex(self):
         """Convert this token to a regex string"""
-        if self.anybefore:
-            return '.*' + re.escape(self.text)
+        if self.minwildcards > 0 or self.maxwildcards > 0:
+            return '.{' + str(self.minwildcards) + ',' + str(self.maxwildcards) + '}' + re.escape(self.text)
         else:
             return re.escape(self.text)
 
@@ -38,34 +42,23 @@ class Token(object):
         tokens = []
         if self.text == other.text:
             # Similar texts in the tokens
-            if self.anybefore == other.anybefore:
-                return [self]
-            return [Token(self.text, anybefore=True)]
+            return [Token(self.text, minwildcards=min(self.minwildcards, other.minwildcards),
+                          maxwildcards=max(self.maxwildcards, other.maxwildcards))]
 
         # Detect similar text blocks in the tokens
         blocks = matcher.get_matching_blocks()
-        mergepattern = ""
         latestpos1 = 0
         latestpos2 = 0
         for i, j, n in blocks:
-            if n == 0:
-                # Last block
-                if latestpos1 != i+n or latestpos2 != j+n:
-                    # There are characters before end of tokens that
-                    # could not be merged
-                    tokens.append(Token('', anybefore=True))
-            elif len(mergepattern) == 0 and (i > 0 or j > 0):
-                # This is the first similar text block but there are
-                # characters before them that could not be merged
-                tokens.append(Token(self.text[i:i+n], anybefore=True))
-            elif len(mergepattern) == 0:
-                # This is the first similar text block and there are
-                # no characters before them ie. it starts both tokens
-                tokens.append(Token(self.text[i:i+n], anybefore=False))
-            else:
-                # This is nth text block and there are characters after
-                # the previous detected text block
-                tokens.append(Token(self.text[i:i+n], anybefore=True))
+            # Since get_matching_blocks() always returns as last an empty block
+            # this automatically adds an empty filler token at the end
+            if n == 0 and i == latestpos1 and j == latestpos2:
+                # Last block was zero length
+                continue
+
+            tokens.append(Token(self.text[i:i+n],
+                                minwildcards = min(i - latestpos1, j - latestpos2),
+                                maxwildcards = max(i - latestpos1, j - latestpos2)))
             latestpos1 = i+n
             latestpos2 = j+n
 

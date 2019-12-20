@@ -8,30 +8,35 @@ from MergeSequenceCache import MergeSequenceCache
 class Analyzer(object):
     """Analyzer receives lines and clusters them"""
 
-    def __init__(self, softmaxlimit=10, hardmaxlimit=25, minsimilarity=0.6, clusterlist=None, debug=False):
+    def __init__(self, minlimit=10, maxlimit=25, minsimilarity=0.6, minprecision=0.6, clusterlist=None, debug=False):
         """Initializes Cluster object
 
-        :param softmaxlimit (optional): soft maximum number of Clusters to form
-        :param hardmaxlimit (optional): hard maximum number of Clusters to form
-        :param minsimilarity (optiona): how similar lines must be in oder to be
-               merged into a cluster: 0.0 no similarity, 1.0 completely similar
+        :param minlimit (optional): minimum number of Clusters to keep
+        :param maxlimit (optional): maximum number of Clusters to keep
+        :param minsimilarity (optional): how similar tokens must be in order to be
+               merged together: 0.0 no similarity, 1.0 completely similar
+        :param minprecision (optional): how many of the characters in a cluster must be non-wildcard (0.0-1.0)
         :param clusterlist (optional): list of Cluster objects to start with
         :param debug (optional): print debug output
         """
 
         if not (minsimilarity > 0 and minsimilarity < 1):
             raise ValueError('minsimilarity must be greater than 0 and less than 1')
+        if not (minprecision > 0 and minprecision < 1):
+            raise ValueError('minprecision must be greater than 0 and less than 1')
         self.minsimilarity = minsimilarity
-        if not (softmaxlimit > 0 and hardmaxlimit > 0):
-            raise ValueError('Maximum number of clusters must be at least 2')
-        self.softmaxlimit = min(softmaxlimit, hardmaxlimit)
-        self.hardmaxlimit = hardmaxlimit
+        self.minprecision = minprecision
+        if not (minlimit > 1 and maxlimit > 1):
+            raise ValueError('Minimum and maximum number of clusters must be at least 2')
+        self.minlimit = min(minlimit, maxlimit)
+        self.maxlimit = maxlimit
         if clusterlist is None:
             self.clusters = []
         else:
             self.clusters = cluster_list
         self.mergeseqcache = MergeSequenceCache(minsimilarity)
         self.debug = debug
+        self.linecount = 0
 
     def __str__(self):
         mystr = ""
@@ -40,29 +45,33 @@ class Analyzer(object):
         return mystr
 
     def analyze_line(self, line):
-        """Analyze the given line and evolve clusters as necessary
+        """Analyze the given line and evolve clusters as necessary"""
 
-        :returns: Cluster object that matches the string
-        """
+        # Keep an ever-increasing line count to track when clusters have been met
+        self.linecount += 1
 
         # First check if line matches exactly to any existing cluster
         for c in self.clusters:
             if c.matches_line(line):
-                return c
+                c.findcount += 1
+                c.lastlinecount = self.linecount
+                if self.debug:
+                    print(line + ": Matches cluster " + str(c))
+                return
 
         # Append the line as a cluster per-se
-        cluster = Cluster(line)
+        cluster = Cluster(line, lastlinecount = self.linecount)
         self.clusters.append(cluster)
+        if self.debug:
+            print(line + ": Add as a cluster per-se")
 
-        if len(self.clusters) <= self.softmaxlimit:
-            # Maximum number not reached, use the line per-se as a cluster
-            if self.debug:
-                print(line + ": Add as a cluster per-se because cluster number is lower that soft limit")
-            return cluster
+        if len(self.clusters) <= self.minlimit:
+            # Do not merge anything, use the line per-se as a cluster
+            return
 
-        # Maximum number exceeded, must merge two clusters in the list
-        # Find the most similar clusters and merge them
-        maxratio = 0
+        # Check if we can merge any clusters in the list
+        # Find the cluster pair with highest merged precision and merge them
+        maxprecision = 0
         similar_c1 = None
         similar_c2 = None
         listlen = len(self.clusters)
@@ -74,51 +83,43 @@ class Analyzer(object):
                 if seq is None:
                     # Clusters are not similar enough for merge
                     continue
-                ratio = 2.0 * seq.weight / (c1.len + c2.len)
-                if ratio > maxratio:
-                    maxratio = ratio
+                if seq.precision > maxprecision:
+                    maxprecision = seq.precision
                     similar_c1 = c1
                     similar_c2 = c2
 
-        if maxratio < self.minsimilarity and len(self.clusters) <= self.hardmaxlimit:
-            # No cluster with enough resemblance to each other
-            if self.debug:
-                print(line + ": Add as a cluster per-se because no similar enough clusters found and hard limit of cluster number not yet reached")
-            return cluster
+        if maxprecision >= self.minprecision:
+            # Found a possible cluster merge with enough precision
+            mergeseq = self.mergeseqcache.get_merge_sequence(similar_c1, similar_c2)
+            matcher = self.mergeseqcache.get_sequence_matcher(similar_c1, similar_c2)
+            merged_cluster = Cluster.new_cluster_from_merge_sequence(mergeseq, matcher)
+            merged_cluster.lastlinecount = max(similar_c1.lastlinecount, similar_c2.lastlinecount)
+            merged_cluster.findcount = similar_c1.findcount + similar_c2.findcount
 
-        if maxratio == 0:
-            # Hard max number of clusters exceeded but no cluster resemble each other
-            # Just remove the oldest one
-            if self.debug:
-                print(line + ": Add as a cluster per-se and remove oldest cluster because no other clusters were similar enough for merge. Removed cluster is: " + str(self.cluster[0]))
-            self.clusters.pop(0)
-            return cluster
+            self.mergeseqcache.remove_cluster(similar_c1)
+            del self.clusters[similar_c1]
+            self.mergeseqcache.remove_cluster(similar_c2)
+            del self.clusters[similar_c2]
+            self.clusters.append(merged_cluster)
 
-        mergeseq = self.mergeseqcache.get_merge_sequence(similar_c1, similar_c2)
-        matcher = self.mergeseqcache.get_sequence_matcher(similar_c1, similar_c2)
-        merged_cluster = Cluster.new_cluster_from_merge_sequence(mergeseq, matcher)
+            if self.debug:
+                print("Merged clusters " + str(similar_c1) + " and " + str(similar_c2) + " into a new cluster " + str(merged_cluster))
+            return
 
-        # Next remove all clusters from the list which match the new one
-        # Use unescaped version of cluster sequence in match comparison
-        clusters_to_remove = [c for c in self.clusters
-                              if merged_cluster.matches_cluster(c)]
-        for c in clusters_to_remove:
-            if self.debug:
-                print("Remove cluster " + str(c))
-            self.mergeseqcache.remove_cluster(c)
-        self.clusters = [c for c in self.clusters if c not in clusters_to_remove]
-        self.clusters.append(merged_cluster)
+        if len(self.clusters) > self.maxlimit:
+            # Maximum number of cluster exceeded
+            # Remove the cluster with the oldest emergence time
 
-        # Return either the newly created cluster or the merged one if
-        # it was already merged
-        if cluster in self.clusters:
+            oldestlinecount = self.clusters[0].lastlinecount
+            oldestclusteridx = 0
+            for idx in range(1, len(self.cluster)):
+                if self.clusters[idx].lastlinecount < oldestlinecount:
+                    oldestlinecount = self.clusters[idx].lastlinecount
+                    oldestclusteridx = idx
+
             if self.debug:
-                print(line + ": Add as a cluster per-se and merge " + str(len(clusters_to_remove)) + " existing clusters to a new one: " + str(merged_cluster))
-            return cluster
-        else:
-            if self.debug:
-                print(line + ": Merge " + str(len(clusters_to_remove)) + " existing clusters to a new one which also matches this line: " + str(merged_cluster))
-            return merged_cluster
+                print("Remove cluster with oldest emergence time: " + str(self.clusters[oldersclusteridx])
+            del self.clusters[oldestclusteridx]
 
 
 if __name__ == "__main__":
