@@ -7,7 +7,7 @@ from difflib import SequenceMatcher
 class MergeSequence(object):
     """A possible sequence of token pairs of two merging clusters"""
 
-    def __init__(self, previous, token1, token2, minwildcards, maxwildcards, weight):
+    def __init__(self, previous, token1, token2, minwildcards, maxwildcards, ratio):
         """Initializes MergeSequence object
            Add a token pair to the sequence meaning that these tokens
            would be merged together
@@ -18,16 +18,27 @@ class MergeSequence(object):
         :param token2: token from the second cluster
         :param minwildcards: minimum number of skipped characters in either cluster before this token pair
         :param maxwildcards: maximum number of skipped characters in either cluster before this token pair
-        :param weight: similarity ratio of tokens weighted with their lengths,
-                       roughly equaling the number of similar subsequent characters of the tokens
+        :param ratio: similarity ratio of token texts as calculated by difflib.SequenceMatcher
         """
         self.previous = previous
         self.token1 = token1
         self.token2 = token2
         self.minwildcards = minwildcards
         self.maxwildcards = maxwildcards
-        myminlen = min(len(token1.text), len(token2.text)) + min(token1.minwildcards, token2.minwildcards)
-        mymaxlen = max(len(token1.text), len(token2.text)) + max(token1.maxwildcards, token2.maxwildcards)
+
+        # Calculate the token pair length by examining texts, token wildcards and wildcards
+        # before the token pair in the merge sequence
+        mintextlen = min(len(token1.text), len(token2.text))
+        maxtextlen = max(len(token1.text), len(token2.text))
+        mintokenwilds = min(token1.minwildcards, token2.minwildcards)
+        maxtokenwilds = max(token1.maxwildcards, token2.maxwildcards)
+        myminlen = mintextlen + mintokenwilds + minwildcards
+        mymaxlen = maxtextlen + maxtokenwilds + maxwildcards
+
+        # Calculate a weight for this token pair, ie. similarity ratio weighted with their text lengths,
+        # roughly equaling the number of similar subsequent characters of the tokens
+        weight = ratio * (len(token1.text)+len(token2.text)) * 0.5
+
         if previous:
             self.weight = previous.weight + weight
             self.minlen = previous.minlen + myminlen
@@ -64,6 +75,6 @@ class MergeSequence(object):
             text = text + "[" + str(t1) + "==" + str(t2) + "]"
         return text
 
-        
+
 if __name__ == "__main__":
     pass

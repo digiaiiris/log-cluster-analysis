@@ -1,7 +1,0 @@
-./tests/test_cluster.py:68:5: E303 too many blank lines (2)
-./ic_analysis/Analyzer.py:86:121: E501 line too long (147 > 120 characters)
-./ic_analysis/Analyzer.py:93:121: E501 line too long (184 > 120 characters)
-./ic_analysis/Analyzer.py:116:121: E501 line too long (159 > 120 characters)
-./ic_analysis/Analyzer.py:120:121: E501 line too long (160 > 120 characters)
-./ic_analysis/log_cluster_analysis.py:40:121: E501 line too long (132 > 120 characters)
-./ic_analysis/MergeSequence.py:54:1: W293 blank line contains whitespace

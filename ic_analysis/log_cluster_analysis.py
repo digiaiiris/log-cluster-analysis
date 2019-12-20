@@ -21,7 +21,8 @@ def main(args=None):
     parser.add_argument("--minsimilarity", type=float, default=0.6,
                         help="Minimum similarity between token for merge (0.0-1.0, 1.0 means identical")
     parser.add_argument("--minprecision", type=float, default=0.6,
-                        help="Minimum precision of clusters, 0.6 means that 60% of cluster length must be precise characters (and not wildcards)")
+                        help="Minimum precision of clusters, 0.6 means that 60% of cluster length must \
+                              be precise characters (and not wildcards)")
     parser.add_argument("--printprogress", type=bool, const=True, default=False, nargs='?',
                         help="Print dot (.) for every line processed")
     parser.add_argument("--printsummary", type=bool, const=True, default=False, nargs='?',
@@ -39,7 +40,8 @@ def main(args=None):
 #        # Read cluster list from file, written by the previous run
 #        a = open('/tmp/file.py', 'r')
 
-    a = Analyzer(minlimit=args.minlimit, maxlimit=args.maxlimit, minsimilarity=args.minsimilarity, minprecision=args.minprecision, debug=args.debug)
+    a = Analyzer(minlimit=args.minlimit, maxlimit=args.maxlimit, minsimilarity=args.minsimilarity,
+                 minprecision=args.minprecision, debug=args.debug)
     for line in sys.stdin:
         a.analyze_line(line.rstrip())
         if args.printprogress:

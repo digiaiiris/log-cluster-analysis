@@ -8,37 +8,29 @@ import pprint
 class TestCluster(unittest.TestCase):
 
     def test_simple_analysis(self):
-        a = Analyzer.Analyzer(hardmaxlimit=2, minsimilarity=0.3)
-        c1 = a.analyze_line('abc def ghi')
-        self.assertEqual(c1.to_text(), 'abc def ghi', str(a))
+        a = Analyzer.Analyzer(maxlimit=2, minsimilarity=0.3, minprecision=0.3)
+        a.analyze_line('abc def ghi')
+        self.assertEqual(a.clusters[0].to_text(), 'abc def ghi', str(a))
 
-        c2 = a.analyze_line('abc xxx 123 123 ghi')
-        self.assertEqual(c2.to_text(), 'abc xxx 123 123 ghi', str(a))
+        a.analyze_line('abc xxx 123 123 ghi')
+        self.assertEqual(a.clusters[1].to_text(), 'abc xxx 123 123 ghi', str(a))
 
-        c3 = a.analyze_line('foo bar')
-        self.assertEqual(c3.to_text(), 'foo bar', str(a))
+        a.analyze_line('foo bar')
 
         self.assertEqual(len(a.clusters), 2, 'merge failed ' + str(a))
-        self.assertEqual(a.clusters[0].to_text(), r'foo bar',
-                         'analyzer failed with ' + str(a))
-        self.assertEqual(a.clusters[1].to_text(), r'abc @@ ghi',
-                         'analyzer failed with ' + str(a))
+        self.assertEqual(a.clusters[0].to_text(), r'foo bar', 'analyzer failed with ' + str(a))
+        self.assertEqual(a.clusters[1].to_text(), r'abc @@3,11@@ ghi', 'analyzer failed with ' + str(a))
 
-    def test_merged_return_value(self):
-        a = Analyzer.Analyzer(hardmaxlimit=2)
-        a.analyze_line('foo bar gee')
-        a.analyze_line('ghi')
-        c = a.analyze_line('foo bar')
-        self.assertEqual(c.to_text(), r'foo bar@@', str(a))
-
-    def test_high_similarity_soft_limit(self):
-        a = Analyzer.Analyzer(softmaxlimit=2, minsimilarity=0.99)
+    def test_high_similarity_max_limit(self):
+        a = Analyzer.Analyzer(maxlimit=2, minsimilarity=0.99)
         a.analyze_line('foo bar')
         a.analyze_line('foo ghi xxx')
         a.analyze_line('bar xxx')
 
-        # Because of the high minsimilarity it should not merge them
-        self.assertEqual(len(a.clusters), 3, str(a))
+        # Because of the high minsimilarity it should not merge them but remove the oldest
+        self.assertEqual(len(a.clusters), 2, str(a))
+        self.assertEqual(a.clusters[0].to_text(), r'foo ghi xxx')
+        self.assertEqual(a.clusters[1].to_text(), r'bar xxx')
 
 
 if __name__ == '__main__':

@@ -60,7 +60,7 @@ class Analyzer(object):
                 return
 
         # Append the line as a cluster per-se
-        cluster = Cluster(line, lastlinecount = self.linecount)
+        cluster = Cluster(line, lastlinecount=self.linecount)
         self.clusters.append(cluster)
         if self.debug:
             print(line + ": Add as a cluster per-se")
@@ -72,8 +72,8 @@ class Analyzer(object):
         # Check if we can merge any clusters in the list
         # Find the cluster pair with highest merged precision and merge them
         maxprecision = 0
-        similar_c1 = None
-        similar_c2 = None
+        similar_c1_idx = 0
+        similar_c2_idx = 0
         listlen = len(self.clusters)
         for idx in range(listlen):
             c1 = self.clusters[idx]
@@ -85,11 +85,13 @@ class Analyzer(object):
                     continue
                 if seq.precision > maxprecision:
                     maxprecision = seq.precision
-                    similar_c1 = c1
-                    similar_c2 = c2
+                    similar_c1_idx = idx
+                    similar_c2_idx = jdx
 
         if maxprecision >= self.minprecision:
             # Found a possible cluster merge with enough precision
+            similar_c1 = self.clusters[similar_c1_idx]
+            similar_c2 = self.clusters[similar_c2_idx]
             mergeseq = self.mergeseqcache.get_merge_sequence(similar_c1, similar_c2)
             matcher = self.mergeseqcache.get_sequence_matcher(similar_c1, similar_c2)
             merged_cluster = Cluster.new_cluster_from_merge_sequence(mergeseq, matcher)
@@ -97,13 +99,19 @@ class Analyzer(object):
             merged_cluster.findcount = similar_c1.findcount + similar_c2.findcount
 
             self.mergeseqcache.remove_cluster(similar_c1)
-            del self.clusters[similar_c1]
             self.mergeseqcache.remove_cluster(similar_c2)
-            del self.clusters[similar_c2]
+            if similar_c1_idx > similar_c2_idx:
+                # Remove last first so that indices match
+                del self.clusters[similar_c1_idx]
+                del self.clusters[similar_c2_idx]
+            else:
+                del self.clusters[similar_c2_idx]
+                del self.clusters[similar_c1_idx]
             self.clusters.append(merged_cluster)
 
             if self.debug:
-                print("Merged clusters " + str(similar_c1) + " and " + str(similar_c2) + " into a new cluster " + str(merged_cluster))
+                print("Merged clusters " + str(similar_c1) + " and " + str(similar_c2) +
+                      " into a new cluster " + str(merged_cluster))
             return
 
         if len(self.clusters) > self.maxlimit:
@@ -112,14 +120,14 @@ class Analyzer(object):
 
             oldestlinecount = self.clusters[0].lastlinecount
             oldestclusteridx = 0
-            for idx in range(1, len(self.cluster)):
+            for idx in range(1, len(self.clusters)):
                 if self.clusters[idx].lastlinecount < oldestlinecount:
                     oldestlinecount = self.clusters[idx].lastlinecount
                     oldestclusteridx = idx
 
             if self.debug:
-                print("Remove cluster with oldest emergence time: " + str(self.clusters[oldersclusteridx])
-            del self.clusters[oldestclusteridx]
+                print("Remove cluster with oldest emergence time: " + str(self.clusters[oldersclusteridx]))
+            self.clusters.pop(oldestclusteridx)
 
 
 if __name__ == "__main__":

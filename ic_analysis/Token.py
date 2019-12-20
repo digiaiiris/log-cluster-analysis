@@ -31,6 +31,12 @@ class Token(object):
         else:
             return re.escape(self.text)
 
+    def increase_wildcard_counts(self, minwildcardsinc, maxwildcardsinc):
+        self.minwildcards += minwildcardsinc
+        self.maxwildcards += maxwildcardsinc
+        self.minlen = len(self.text) + self.minwildcards
+        self.maxlen = len(self.text) + self.maxwildcards
+
     def merge(self, other, matcher):
         """Merge the tokens together
 
@@ -56,9 +62,15 @@ class Token(object):
                 # Last block was zero length
                 continue
 
-            tokens.append(Token(self.text[i:i+n],
-                                minwildcards = min(i - latestpos1, j - latestpos2),
-                                maxwildcards = max(i - latestpos1, j - latestpos2)))
+            # Calculate number of wildcards between this block and the preceding one
+            minwildcards = min(i - latestpos1, j - latestpos2)
+            maxwildcards = max(i - latestpos1, j - latestpos2)
+            if len(tokens) == 0:
+                # The first token generated must involve the preceding wildcards of the original token pair
+                minwildcards += min(self.minwildcards, other.minwildcards)
+                maxwildcards += max(self.maxwildcards, other.maxwildcards)
+
+            tokens.append(Token(self.text[i:i+n], minwildcards=minwildcards, maxwildcards=maxwildcards))
             latestpos1 = i+n
             latestpos2 = j+n
 
