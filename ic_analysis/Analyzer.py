@@ -47,6 +47,10 @@ class Analyzer(object):
     def analyze_line(self, line):
         """Analyze the given line and evolve clusters as necessary"""
 
+        if not line:
+            # Skip empty lines
+            return
+
         # Keep an ever-increasing line count to track when clusters have been met
         self.linecount += 1
 
