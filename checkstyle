@@ -1,0 +1,2 @@
+./ic_analysis/IdentifiersConfig.py:45:29: W291 trailing whitespace
+./ic_analysis/IdentifiersConfig.py:70:1: E305 expected 2 blank lines after class or function definition, found 1
