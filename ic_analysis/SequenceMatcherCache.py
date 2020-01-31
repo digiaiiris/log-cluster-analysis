@@ -3,6 +3,8 @@
 import re
 from difflib import SequenceMatcher
 
+# TBD: Switch to use python-Levenshtein instead of difflib
+
 
 class SequenceMatcherCache(object):
     """Caches SequenceMatcher objects for cluster tokens"""

@@ -105,6 +105,9 @@ class Cluster(object):
         else:
             return True
 
+    # TBD: Move to a separate MergeSequenceConstructor class??
+    #    Rationale: too long for Cluster class, it should be separated into sub-functions and can be done
+    #               well outside of Cluster class
     def construct_merge_sequence(self, other, minsimilarity, matchercache):
         """Construct a merge sequence merging this cluster with another one
 
